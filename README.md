@@ -12,7 +12,7 @@ I'm not sure why you'd use a Mac for this but I did!
 
 On a Mac you can install the plugins by moving `io_scene_mwm` to `/Applications/Blender/blender.app/Contents/Resources/2.79/scripts/addons`
 
-Other platforms you probably put it somewhere else.  Go google it or something.
+Other platforms you put it somewhere else.  Go google it or something.
 
 Once you put there: 
 * Run Blender
