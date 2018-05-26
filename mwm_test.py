@@ -30,8 +30,14 @@ def read_string(file):
     for i in range(nChars):
         byte = file.read(1)
         chars.append(chr(int.from_bytes(byte, "little")))
+    if nChars == 0:
+        return False
 
-    return "".join(chars)
+    string = "".join(chars)
+    print("string size %s" % nChars)
+    print("%s\n" % string)
+
+    return string
 
 
 def read_bool(file):
@@ -40,7 +46,6 @@ def read_bool(file):
 
 
 def load_dummies(file):
-
     section = read_string(file)
     nDummies = read_long(file)
 
@@ -209,10 +214,16 @@ def load():
     version = read_string(file)
     print("Version: %s" % version)
 
-
+    print("Loading dummies")
     dummies = load_dummies(file)
+
+    print("Loading vertex data")
     vertex_data = load_vertext_data(file)
+
+    print("Loading model parameters")
     model_params = load_model_params(file)
+
+    print("Loading model parts")
     model_parts = load_model_parts(file)
 
     file.close()
