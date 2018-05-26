@@ -422,9 +422,17 @@ def f16_to_f32(float16):
 
 
 def read_long(file):
-
-    result = struct.unpack('l', file.read(4))
-    return result[0]
+    acc = 0
+    unpack = struct.unpack
+    s = file.read(4)
+    length = len(s)
+    if length % 4:
+        extra = (4 - length % 4)
+        s = b('\000') * extra + s
+        length = length + extra
+    for i in range(0, length, 4):
+        acc = (acc << 32) + unpack('>I', s[i:i+4])[0]
+    return acc
 
 
 def read_float(file):

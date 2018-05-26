@@ -1,2 +1,4 @@
 *.mwm
 addons
+venv
+.idea
