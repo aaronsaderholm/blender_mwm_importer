@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/Applications/Blender/blender.app/Contents/Resources/2.79/scripts/addons/io_scene_mwm/__init__.py", line 26, in execute
+    return import_mwm.load(self, context)
+  File "/Applications/Blender/blender.app/Contents/Resources/2.79/scripts/addons/io_scene_mwm/import_mwm.py", line 62, in load
+    flag = read_long(file)
+  File "/Applications/Blender/blender.app/Contents/Resources/2.79/scripts/addons/io_scene_mwm/import_mwm.py", line 426, in read_long
+    result = struct.unpack('l', file.read(4))
+struct.error: unpack requires a bytes object of length 8
