@@ -1,0 +1,948 @@
+//--------------------------------------
+//--- 010 Editor v5.0.2 Binary Template
+// File:...... mwm files
+// Author:.... johnwhile
+// Email:..... johnwhilemail@gmail.com
+// Revision:.. 12/01/2015
+
+local int version = 01052002; // all format depend by this value
+
+//+-----------------------------------------------+//
+//|         Maths Utils                           |//
+//+-----------------------------------------------+//
+local float PosINF = 0x7F800000; // 0 111111111 0000000000000000000000
+local float NegINF = PosINF * -1; // 1 111111111 0000000000000000000000
+local int i=0;
+
+//sum of point3
+void Sum(float p0[], float p1[] , float sum[])
+{
+    sum[0] = p0[0]+p1[0];
+    sum[1] = p0[1]+p1[1];
+    sum[2] = p0[2]+p1[2];
+};
+//subtraction of point3
+void Sub(float p0[], float p1[] , float sub[])
+{
+    sub[0] = p0[0]-p1[0];
+    sub[1] = p0[1]-p1[1];
+    sub[2] = p0[2]-p1[2];
+};
+//scalar multiplication of point3
+void Mul(float p0[], float s, float mul[])
+{
+    mul[0] = p0[0]*s;
+    mul[1] = p0[1]*s;
+    mul[2] = p0[2]*s;
+};
+
+
+string WritePoint(float p[])
+{
+    local string s;   
+    SPrintf( s, "%6.4f , %6.4f , %6.4f", p[0] , p[1] ,p[2]);
+    return s;
+};
+
+//+-----------------------------------------------+//
+//|         Vector 4 encode                       |//
+//+-----------------------------------------------+//
+typedef struct
+{
+    FLOAT   x;
+    FLOAT   y;
+    FLOAT   z;
+    FLOAT   w;
+} QUATERNION;
+
+
+
+typedef struct
+{   
+    hfloat   x;
+    hfloat   y;
+    hfloat   z;
+    hfloat   w;
+} HPOINT4 <read = ReadHPOINT4 , write = WriteHPOINT4>;
+
+// read function is used only to show you quickly the deconded data
+string ReadHPOINT4( HPOINT4 &p )
+{
+    string s;   
+    SPrintf( s, "[%4.2f , %4.2f , %4.2f]   (x%d)", p.x*p.w , p.y*p.w , p.z*p.w , p.w);
+    return s;
+};
+// write function is used to test your changes, not implemented in some case
+string WriteHPOINT4( HPOINT4 &p , string s)
+{
+    float x,y,z,w;
+    
+    SScanf( s, "[%f , %f , %f]", x, y, z );   
+    
+    w = Max(Abs(x),Max(Abs(y),Abs(z)));
+    int minw = (int)w;
+    minw = minw < 1 ? 1 : minw > 2048 ? 2048 : minw;
+
+    p.x = x / minw;
+    p.y = y / minw;
+    p.z = z / minw;
+    p.w = minw;
+};
+
+//+-----------------------------------------------+//
+//|         Vector 3 encode                       |//
+//+-----------------------------------------------+//
+typedef struct
+{   
+    hfloat   x;
+    hfloat   y;
+    hfloat   z;
+} HPOINT3 <read = ReadHPOINT3, write = writeHPOINT3>;
+
+string ReadHPOINT3( HPOINT3 &p )
+{
+    string s;   
+    SPrintf( s, "[%4.2f , %4.2f , %4.2f]", p.x , p.y , p.z);
+    return s;
+};
+
+void writeHPOINT3( HPOINT3 &p, string s )
+{
+    float x,y,z,w;
+    SScanf( s, "[%f , %f , %f]", x, y, z );
+    p.x = (hfloat)x;
+    p.y = (hfloat)y;
+    p.z = (hfloat)z;
+};
+//+-----------------------------------------------+//
+//|         Vector 2 encode                       |//
+//+-----------------------------------------------+//
+typedef struct
+{   
+    hfloat   u;
+    hfloat   v;
+} HPOINT2 <read = ReadHPOINT2, write = writeHPOINT2>;
+
+string ReadHPOINT2( HPOINT2 &p )
+{
+    string s;   
+    SPrintf( s, "[%4.2f , %4.2f]", p.u , p.v);
+    return s;
+};
+
+void writeHPOINT2( HPOINT2 &p, string s )
+{
+    float x,y;
+    SScanf( s, "[%f , %f]", u, v);
+    p.u = (hfloat)u;
+    p.v = (hfloat)v;
+};
+//+-----------------------------------------------+//
+//|         Normalized vector encode              |//
+//+-----------------------------------------------+//
+// bigendian and littlendian, padded and unpadded's bitsfield create more confusion
+// so in my library i use UInt32 to read a packed vector instead ushort because
+// all bits are arranged in order as continuos bits stream :
+// uint packed = wyyyyyyy yyyyyyyy zxxxxxxx xxxxxxxx 
+// where z = zsign
+
+const int mask = 0x7FFF; //01111111 11111111
+const int signmask = ~mask;
+
+// with 010editor bit field order don't match with text synstax so be carefull
+typedef struct
+{
+    USHORT x : 15;
+    USHORT wsign : 1;
+    USHORT y : 15;
+    USHORT zsign : 1;
+} NORMALXY_bits <read = ReadNORMALXY_bits, write = writeNORMALXY_bits>;
+
+string ReadNORMALXY_bits( NORMALXY_bits &p )
+{
+    string s; 
+
+    //SPrintf( s, "[%d , %d , %d , %d]", p.x,p.y,p.zsign,p.wsign);  
+
+    float x = p.x;
+    float y = p.y;
+    float z = 0.0f;
+    float sign_z = p.zsign > 0 ? 1.0f : -1.0f;
+    float sign_w = p.wsign > 0 ? 1.0f : -1.0f;
+
+    // convert [0,32767] to [0.0f,1.0f]
+    x /= 32767.0f;
+    y /= 32767.0f;
+    // convert [0.0f,1.0f] to [-1.0f,1.0f]
+    x = 2*x-1;
+    y = 2*y-1;
+
+    float magn = 1.0f - x*x - y*y;
+    if (magn<0) magn = 0;
+
+    z = sign_z * Sqrt(magn);
+
+
+    SPrintf( s, "[%f , %f , %f , %f]", x,y,z,sign_w);  
+    return s;
+};
+
+void writeNORMALXY_bits( NORMALXY_bits &p, string s )
+{
+    float x,y,z,w;
+    SScanf( s, "%f %f %f %f",x,y,z,w);
+};
+
+
+// i know that is important only sign of w
+typedef struct
+{
+    USHORT x;
+    USHORT y;
+} NORMALXY <read = ReadNORMALXY, write = writeNORMALXY>;
+
+string ReadNORMALXY( NORMALXY &p )
+{
+    string s;
+
+    float x = p.x & mask;
+    float y = p.y & mask;
+    float z = 0.0f;
+
+    float z_sign = (p.x & signmask)> 0 ? -1.0f : 1.0f;
+    float w_sign = (p.y & signmask)> 0 ? -1.0f : 1.0f;
+
+    //SPrintf( s, "[%d , %d , %f , %f]", x, y , z_sign , w_sign);  
+    
+        
+    // convert [0,32767] to [0.0f,1.0f]
+    x /= 32767.0f;
+    y /= 32767.0f;
+    // convert [0.0f,1.0f] to [-1.0f,1.0f]
+    x = 2*x-1;
+    y = 2*y-1;
+
+    float magn = 1.0f - x*x - y*y;
+    if (magn<0) magn = 0;
+    z = z_sign * Sqrt(magn);
+
+     
+    SPrintf( s, "[%1.4f , %1.4f , %1.4f , %1.4f]", x,z,y,w_sign);  
+    return s;
+};
+
+void writeNORMALXY( NORMALXY &p, string s )
+{
+    float x,y,z,w;
+    SScanf( s, "%f %f %f %f",x,z,y,w);
+};
+
+
+
+//+-----------------------------------------------+//
+//|         Default vectors                       |//
+//+-----------------------------------------------+//
+typedef struct
+{   
+    float   x;
+    float   y;
+    float   z;
+} POINT3 <read = ReadPOINT3, write = writePOINT3>;
+
+string ReadPOINT3( POINT3 &p )
+{
+    string s;   
+    SPrintf( s, "[%6.4f , %6.4f , %6.4f]", p.x , p.y , p.z);
+    return s;
+};
+
+void writePOINT3( POINT3 &p, string s )
+{
+    float x,y,z,w;
+    SScanf( s, "[%f , %f , %f]", x, y, z );
+    p.x = (hfloat)x;
+    p.y = (hfloat)y;
+    p.z = (hfloat)z;
+};
+
+typedef struct
+{
+    UINT x;
+    UINT y;
+    UINT z;
+} FACE32;
+
+typedef struct
+{
+    UBYTE x;
+    UBYTE y;
+    UBYTE z;
+    UBYTE w;
+} X4BYTE;
+
+//+-----------------------------------------------+//
+//|      Utilities struct                         |//
+//+-----------------------------------------------+//
+typedef struct
+{
+    ubyte nChar;
+    if (nChar>0) CHAR stri[nChar];
+    
+} STRINGA <read = ReadSTRINGA, write = writeSTRINGA, optimize=false>;
+
+string ReadSTRINGA( STRINGA &c )
+{
+    string s; 
+    if (c.nChar>0) SPrintf( s, "%s", c.stri);
+    else SPrintf( s, "");
+    return s;
+};
+
+void writeSTRINGA( STRINGA &c, string s )
+{
+    SScanf( s, "%s", c.stri);
+    int size = Strlen(s);
+    nChar = (byte)size;
+};
+
+typedef struct
+{
+    BYTE nChar;
+    if (nChar>0) CHAR stri[nChar/2];
+
+} STRINGAx2;
+
+typedef enum <byte>
+{
+    False = 0,
+    True  = 1
+} BOOL;
+
+//+-----------------------------------------------+//
+//|      Boundaries struct                        |//
+//+-----------------------------------------------+//
+
+// 32 bit precision version
+typedef struct
+{   
+    POINT3  min;
+    POINT3  max;
+} BBOX <read = ReadBBOX>;
+
+string ReadBBOX( BBOX &b )
+{
+    string s;   
+    SPrintf( s, "size [%4.2f , %4.2f , %4.2f]", b.max.x-b.min.x , b.max.y-b.min.y , b.max.z-b.min.z);
+    return s;
+};
+
+typedef struct
+{   
+    POINT3  pos;
+    FLOAT   radius;
+} BSPHERE ;
+
+
+//+-----------------------------------------------+//
+//|      Transformations struct                   |//
+//+-----------------------------------------------+//
+typedef struct 
+{
+    FLOAT m00 , m01 , m02 , m03;
+    FLOAT m10 , m11 , m12 , m13;
+    FLOAT m20 , m21 , m22 , m23;
+    FLOAT m30 , m31 , m32 , m33;
+
+} Matrix;
+
+typedef struct 
+{
+    FLOAT m00 , m01 , m02 , m03;
+    FLOAT m10 , m11 , m12 , m13;
+    FLOAT m20 , m21 , m22 , m23;
+    FLOAT m30 , m31 , m32 , m33;
+
+} TRANSFORMMATRIX<read = ReadTRANSFORMMATRIX>;
+
+string ReadTRANSFORMMATRIX( TRANSFORMMATRIX &m )
+{
+    // SRT transformation (1° Scale + 2° Rotation + 3° Traslation) decomposition
+    // this transformation order is the most utilized, remeber that
+    // in my library i use Column Major insteal Row Major Matrix like
+    // Directx, so the order become TRS
+
+    float sx = m.m00*m.m00 + m.m01*m.m01 + m.m02*m.m02;
+    float sy = m.m10*m.m10 + m.m11*m.m11 + m.m12*m.m12;
+    float sz = m.m20*m.m20 + m.m21*m.m21 + m.m22*m.m22;
+    float tx = m.m30;
+    float ty = m.m31;
+    float tz = m.m32;
+
+
+    if ( sx < 1e-6f) sx = 1; else sx = Sqrt(sx);
+    if ( sy < 1e-6f) sy = 1; else sy = Sqrt(sy);
+    if ( sz < 1e-6f) sz = 1; else sz = Sqrt(sz);
+
+
+    float m00 = m.m00/sx;
+    float m01 = m.m00/sx;
+    float m02 = m.m00/sx;
+    
+    float m10 = m.m00/sy;
+    float m11 = m.m00/sy;
+    float m12 = m.m00/sy;
+    
+    float m20 = m.m00/sz;
+    float m21 = m.m00/sz;
+    float m22 = m.m00/sz;
+ 
+    string s;   
+    SPrintf( s, "S[%4.2f , %4.2f , %4.2f] * R[] * T[%4.2f , %4.2f , %4.2f]",sx,sy,sz,tx,ty,tz);
+    return s;
+};
+
+//+-----------------------------------------------+//
+//|     Properties regrouped as struct            |//
+//+-----------------------------------------------+//
+struct BOOLEANPARAMETER
+{
+    STRINGA paramname;
+    BOOL paramvalue;
+};
+struct FLOATPARAMETER
+{
+    STRINGA paramname;
+    FLOAT paramvalue;
+};
+
+typedef struct
+{
+    STRINGA paramname;
+    STRINGA paramvalue;
+}STRINGPARAMETER <read = ReadSTRINGPARAMETER>;
+
+
+string ReadSTRINGPARAMETER( STRINGPARAMETER &p )
+{
+    string s;  
+    string n = "";
+    if (p.paramname.nChar>0) n = p.paramname.stri;
+    string v = "";
+    if (p.paramvalue.nChar>0) v = p.paramvalue.stri;
+
+    SPrintf( s, "%s : %s", n,v );
+    return s;
+};
+
+struct INTPARAMETER
+{
+    STRINGA paramname;
+    LONG paramvalue;
+};
+
+struct BBOXPARAMETER
+{
+    STRINGA paramname;
+    BBOX    box;
+};
+struct BSPHEREPARAMETER
+{
+    STRINGA paramname;
+    BSPHERE sphere;
+};
+
+//+-----------------------------------------------+//
+//|     Struct of File in order                   |//
+//+-----------------------------------------------+//
+struct HEADER
+{
+    INTPARAMETER debug_flag;
+    if (debug_flag.paramvalue>0) STRINGA version;
+};
+
+struct DUMMIE
+{
+    STRINGA name;
+    TRANSFORMMATRIX transform;
+    
+    LONG num_of_parameters; 
+    if (num_of_parameters>0)
+         STRINGPARAMETER infos[num_of_parameters] <optimize=false>;
+};
+
+struct MODEL_DUMMIES
+{
+    INTPARAMETER dummies;
+    if (dummies.paramvalue>0)
+        DUMMIE subparts[dummies.paramvalue] <optimize=false,bgcolor=cDkGreen>;
+};
+
+// check model bounding box
+local float GlobalMin[3] = {PosINF,PosINF,PosINF};
+local float GlobalMax[3] = {NegINF,NegINF,NegINF};
+
+
+struct VERTICES_DATA
+{
+    INTPARAMETER positions;
+    if (positions.paramvalue>0)
+    {
+        HPOINT4 pos[positions.paramvalue]<bgcolor=cLtBlue>;
+        for (i=0; i<positions.paramvalue; i++) 
+        {
+            if (GlobalMin[0]>pos[i].x) GlobalMin[0]=(float)pos[i].x;
+            if (GlobalMin[1]>pos[i].y) GlobalMin[1]=(float)pos[i].y;
+            if (GlobalMin[2]>pos[i].z) GlobalMin[2]=(float)pos[i].z;
+
+            if (GlobalMax[0]<pos[i].x) GlobalMax[0]=(float)pos[i].x;
+            if (GlobalMax[1]<pos[i].y) GlobalMax[1]=(float)pos[i].y;
+            if (GlobalMax[2]<pos[i].z) GlobalMax[2]=(float)pos[i].z;
+        };
+
+        local float size[3];
+        
+        Sub(GlobalMax,GlobalMin,size);
+
+        Printf ("min vertex bound  = %s\nmax vertex bound  = %s\nresult size = %s\n",
+            WritePoint(GlobalMin),
+            WritePoint(GlobalMax),
+            WritePoint(size));
+
+    }
+    
+    INTPARAMETER normals;
+    if (normals.paramvalue>0) NORMALXY_bits norm[normals.paramvalue]<bgcolor=cLtGreen>;
+    
+    INTPARAMETER uvcoords;
+    if (uvcoords.paramvalue>0) HPOINT2 tex[uvcoords.paramvalue]<bgcolor=cLtRed>;
+
+    INTPARAMETER binormals;
+    if (binormals.paramvalue>0) NORMALXY binorm[binormals.paramvalue]<bgcolor=cLtBlue>;
+
+    INTPARAMETER tangents;
+    if (tangents.paramvalue>0) NORMALXY tang[tangents.paramvalue]<bgcolor=cYellow>;
+
+    // texture channel, never used
+    INTPARAMETER texcoord1;
+    if (texcoord1.paramvalue>0) HPOINT2 texchn[tangents.paramvalue] <bgcolor=cNone>;
+
+};
+
+struct MODEL_PARAMS
+{
+    BOOLEANPARAMETER RescaleToLengthInMeters;
+    FLOATPARAMETER   LengthInMeters;
+    FLOATPARAMETER   RescaleFactor;
+    BOOLEANPARAMETER Centered;
+    BOOLEANPARAMETER UseChannelTextures;
+    FLOATPARAMETER   SpecularShininess;
+    FLOATPARAMETER   SpecularPower;
+    BBOXPARAMETER    BoundingBox;
+    BSPHEREPARAMETER BoundingSphere;
+    BOOLEANPARAMETER SwapWindingOrder;   
+};
+
+struct MATERIAL
+{
+    INTPARAMETER textures;
+    if (textures.paramvalue>0)
+        STRINGPARAMETER texturestrings[textures.paramvalue] <optimize=false,bgcolor=cDkGreen>;
+    
+    FLOAT  Glossiness;
+    POINT3 diffusecolor;
+    POINT3 specularcolor;
+    STRINGA technique;
+    
+    if (technique.stri == "GLASS") BYTE unknow[3];
+
+};
+struct MATERIAL_DEBUG
+{
+    STRINGPARAMETER texturestrings <optimize=false,bgcolor=cDkGreen>;
+    BYTE   byte0;
+    FLOAT  Glossiness;
+    POINT3 diffusecolor;
+    POINT3 specularcolor;
+    FLOAT  float0;
+};
+
+struct MODEL_PART(int debugmode)
+{
+    union UNKNOW
+    {
+        hfloat f[2];
+        long   materialHandle;
+        ushort s[2];
+    };
+
+    struct PARTDATA(int debugmode)
+    {
+        UNKNOW   handle_or_unknow_value;
+
+        if (debugmode==0) LONG debug_unknow;
+
+        LONG    count;
+        FACE32  triangles[count/3];
+        BOOL    hasmaterial;
+        if (hasmaterial) 
+        {   
+            if (debugmode==0)
+                 MATERIAL_DEBUG material;
+            else 
+                 MATERIAL material;
+        }
+    };
+
+    INTPARAMETER header;
+    
+    if (header.paramvalue>0)
+    PARTDATA part(debugmode)[header.paramvalue] <optimize=false,bgcolor=cGreen>;
+    
+};
+
+//+-----------------------------------------------+//
+//|    decode using MinerWars source              |//
+//+-----------------------------------------------+//
+const int MAX_INDICES_PER_NODE = 6;
+local float quantizationsize[3];
+local int counter = 0;
+
+// 16 bit precision version
+typedef struct
+{   
+    USHORT  min[3];
+    USHORT  max[3];
+
+} BBOX_16;
+
+// this f*** function don't work
+string readBBOX_16( BBOX_16 &b )
+{
+    string s;   
+    SPrintf( s, "[%d %d %d] ", ((float)b.min[0])/quantizationsize[0], b.min[1]/quantizationsize[1], b.min[2]/quantizationsize[2]);
+    SPrintf( s, "[%f %f %f] ", b.max[0]/quantizationsize[0], b.max[1]/quantizationsize[1], b.max[2]/quantizationsize[2]);
+    return s;
+};
+
+typedef struct
+{
+    LONG index;
+} BVH_INDEX <read = readBVH_INDEX>;
+
+string readBVH_INDEX( BVH_INDEX &i )
+{
+    string s;   
+    SPrintf( s, "%d %s", i.index , (i.index<0? "escape" : "ok"));
+    return s;
+};
+
+struct BVH_NODE
+{    
+    if (counter%2==0) SetBackColor( cLtBlue ); else SetBackColor( cLtRed );
+
+    LONG count;
+    if (count > MAX_INDICES_PER_NODE) 
+    {
+        Warning( "MAX_INDICES_PER_NODE exeption" );
+        return 0;
+    }
+    if (count>0) BVH_INDEX escapeIndexOrDataIndex[count];
+
+    // just for fun
+    if (counter%2==0)
+        BBOX_16 quantizedAabb <bgcolor=cLtBlue>;
+    else 
+        BBOX_16 quantizedAabb <bgcolor=cLtRed>;
+
+    counter++;
+};
+
+struct MODEL_BVH
+{
+    SetBackColor( cNone );
+
+    INTPARAMETER header;
+    
+    local int ByteSum = header.paramvalue;
+
+    if (ByteSum>0)
+    {
+        // i know byte size so i can know if current structure is well decoded or not
+        local int CurrentPosition = FTell();      
+        LONG     numNodes;
+        BBOX     globalbound; 
+        
+        // the half size in 0-32764 range
+        POINT3   bvhQuantization;
+        // this global variable will be used to display purpose
+        quantizationsize[0] = bvhQuantization.x;
+        quantizationsize[1] = bvhQuantization.y;
+        quantizationsize[2] = bvhQuantization.z;
+
+        if (numNodes>0) BVH_NODE nodearray[numNodes] <optimize=false>;
+        
+        FSeek(CurrentPosition + ByteSum);
+    }
+    SetBackColor( cNone );
+};
+
+
+struct MODEL_INFO
+{
+    STRINGA header;
+    LONG    triangles;
+    LONG    vertices;
+    POINT3  boundingBoxSize;
+};
+
+
+typedef struct 
+{
+    LONG bone0;
+    LONG bone1;
+    LONG bone2;
+    LONG bone3;
+} MODEL_BLEND_Bones <read = readBlendBones>;
+
+string readBlendBones( MODEL_BLEND_Bones &b )
+{
+    string s;   
+    if (b.bone0 > 0) SPrintf( s, "%d ", b.bone0);
+    if (b.bone1 > 0) SPrintf( s, "%s %d ", s , b.bone1);
+    if (b.bone2 > 0) SPrintf( s, "%s %d ", s , b.bone2);
+    if (b.bone3 > 0) SPrintf( s, "%s %d ", s , b.bone3);
+    return s;
+};
+
+typedef struct 
+{
+    FLOAT bone0;
+    FLOAT bone1;
+    FLOAT bone2;
+    FLOAT bone3;
+} MODEL_BLEND_Weights <read = readBlendWeights>;
+
+string readBlendWeights( MODEL_BLEND_Weights &b )
+{
+    string s;   
+    if (b.bone0 > 0) SPrintf( s, "%1.4f ", b.bone0);
+    if (b.bone1 > 0) SPrintf( s, "%s %1.4f ", s , b.bone1);
+    if (b.bone2 > 0) SPrintf( s, "%s %1.4f ", s , b.bone2);
+    if (b.bone3 > 0) SPrintf( s, "%s %1.4f ", s , b.bone3);
+    return s;
+};
+
+
+struct MODEL_BLEND
+{
+     // each vertex can be affected by 4 bones...
+    INTPARAMETER blendindices;
+    if (blendindices.paramvalue>0) 
+            MODEL_BLEND_Bones bindices[blendindices.paramvalue];
+
+    // ... the sum of weight must be 1.0
+    INTPARAMETER blendweight;
+    if (blendweight.paramvalue>0)
+         MODEL_BLEND_Weights bweight[blendweight.paramvalue];
+
+};
+
+struct KEYFRAME
+{
+    DOUBLE Time;
+    QUATERNION Rotation;
+    POINT3 Traslation;
+};
+
+struct ANIMBONE
+{
+    STRINGA bonename;
+    LONG count; 
+    if (count>0) 
+        KEYFRAME keys[count];
+};
+
+struct ANIMATION
+{
+    STRINGA animname;
+    DOUBLE  duration;
+    LONG    numbones;    
+    ANIMBONE skeletons[numbones]<optimize=false>;
+};
+
+struct MODEL_ANIMS
+{
+    INTPARAMETER header;
+    
+    if (header.paramvalue>0)
+        ANIMATION animations[header.paramvalue]<optimize=false>;
+
+    //possible bone key
+    LONG num_key;
+    LONG bytes_key[num_key];
+};
+
+
+struct BONE
+{
+    STRINGA bonename;
+    LONG    hierarchyID;
+    TRANSFORMMATRIX transform;  
+};
+
+struct SKELETON
+{
+    INTPARAMETER bone_header;
+    
+    if (bone_header.paramvalue>0)
+         BONE bones[bone_header.paramvalue] <optimize=false>;
+
+    INTPARAMETER bone_mapping;
+    if (bone_mapping.paramvalue>0)
+        LONG maps[bone_mapping.paramvalue*3];
+
+    
+};
+struct HAVOK_BYTEPARAM
+{
+    STRINGAx2 stringa;
+    BYTE b;
+};
+
+
+// TODO: try to export havok data of 3dstudio max
+struct HAVOKSECTION
+{
+    STRINGA havokcollsion;
+    LONG ByteSum;
+    
+    local int CurrentPosition = FTell();
+    
+    if (ByteSum>0)
+    {
+HFLOAT hf0[5];
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+SHORT  s;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+LONG l;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+BYTE b8[7];
+HAVOK_BYTEPARAM param;
+STRINGAx2 stringa;
+SHORT s;
+HAVOK_BYTEPARAM param;
+SHORT s;
+STRINGAx2 stringa;
+BYTE  b;
+STRINGAx2 stringa;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+BYTE  b5_2[4];
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+
+STRINGAx2 stringa;
+
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+
+STRINGAx2 stringa;
+
+HAVOK_BYTEPARAM param;
+
+STRINGAx2 stringa;
+
+HAVOK_BYTEPARAM paramarr_1[4]<optimize=false>;
+
+STRINGAx2 stringa;
+
+HAVOK_BYTEPARAM paramarr[41]<optimize=false>;
+BYTE  b;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+BYTE  b;
+HAVOK_BYTEPARAM param;
+BYTE  b;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+BYTE  b16[16];
+HAVOK_BYTEPARAM param;
+STRINGAx2 stringa;
+HAVOK_BYTEPARAM param;
+STRINGAx2 stringa;
+HAVOK_BYTEPARAM param;
+STRINGAx2 stringa;
+HAVOK_BYTEPARAM param;
+HAVOK_BYTEPARAM param;
+
+
+
+
+    }
+   
+    FSeek(CurrentPosition + ByteSum);
+};
+
+
+struct MODEL_LOD
+{
+    INTPARAMETER lodlevels;
+    
+    struct LODS
+    {
+        FLOAT distance;
+        STRINGA modelpath;
+    };
+    if (lodlevels.paramvalue>0)
+     LODS lods[lodlevels.paramvalue]<optimize=false>;
+    
+};
+
+struct INDEX_HEADER
+{
+    STRINGA label;
+    long index;
+};
+
+//+-----------------------------------------------------------+//
+//|                         MAIN                              |//
+//+-----------------------------------------------------------+//
+LittleEndian();
+SetBackColor( cNone );
+
+HEADER         header   <bgcolor=cLtGray>;
+local int debugmode = header.debug_flag.paramvalue;
+long index_item_count;
+INDEX_HEADER index_headers[index_item_count];
+// MODEL_DUMMIES  dummies;
+// VERTICES_DATA  vertices;
+// MODEL_PARAMS   modelparams;
+// MODEL_PART     modelparts(debugmode);
+// MODEL_BVH      modelbvh;
+// MODEL_INFO     modelinfo;
+// MODEL_BLEND    modelblend;
+// MODEL_ANIMS    animation;
+// SKELETON       skeleton;
+// HAVOKSECTION   havoksection <bgcolor=cLtGray>;
+// FLOATPARAMETER patternscale;
+// MODEL_LOD      lodsection;
+Printf ("SCRIPT_END = OK\n");
+
+/*
+{
+    Warning( "Error reading string, nChar>1000 return 0 to safety" );
+    return 0;
+}
+*/

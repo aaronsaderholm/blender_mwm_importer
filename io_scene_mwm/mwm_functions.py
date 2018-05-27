@@ -4,7 +4,7 @@ import mwm_datatypes as mwm
 import time
 
 
-def load_model_params(file):
+def load_model_params(index_dict, file):
     params = {}
 
     # RescaleToLengthInMeters param
@@ -78,18 +78,18 @@ def load_model_params(file):
     return params
 
 
-def load_vertext_data(file):
-    positions = load_positions(file)
-    normals = load_normals(file)
-    uv_coords = load_uv_coords(file)
-    binormals = load_binormals(file)
-    tangents = load_tangents(file)
-    tex_coords = load_text_coord(file)
+def load_model_data(index_dict, file):
+    vertices = load_vertices(index_dict, file)
+    normals = load_normals(index_dict, file)
+    uv_coords = load_uv_coords(index_dict, file)
+    binormals = load_binormals(index_dict, file)
+    tangents = load_tangents(index_dict, file)
+    tex_coords = load_text_coord(index_dict, file)
 
-    return mwm.VertexData(positions, normals, uv_coords, binormals, tangents, tex_coords)
+    return mwm.VertexData(vertices, normals, uv_coords, binormals, tangents, tex_coords)
 
 
-def load_model_parts(file):
+def load_model_parts(index_dict, file):
     section = read.read_string(file)
     nParts = read.read_long(file)
 
@@ -148,7 +148,10 @@ def load_material(file):
     return mwm.Material(name, params, glossiness, diffuse_color, specular_color, technique)
 
 
-def load_tangents(file):
+def load_tangents(index_dict, file):
+    seek_loc = index_dict['Tangents']
+    file.seek(seek_loc)
+
     section = read.read_string(file)
     nTang = read.read_long(file)
 
@@ -159,7 +162,9 @@ def load_tangents(file):
     return tangents
 
 
-def load_text_coord(file):
+def load_text_coord(index_dict, file):
+    seek_loc = index_dict['TexCoords1']
+    file.seek(seek_loc)
     section = read.read_string(file)
     nTextCoord = read.read_long(file)
 
@@ -169,7 +174,9 @@ def load_text_coord(file):
     return None
 
 
-def load_binormals(file):
+def load_binormals(index_dict, file):
+    seek_loc = index_dict['Binormals']
+    file.seek(seek_loc)
     section = read.read_string(file)
     nBinormals = read.read_long(file)
 
@@ -180,7 +187,9 @@ def load_binormals(file):
     return binormals
 
 
-def load_uv_coords(file):
+def load_uv_coords(index_dict, file):
+    seek_loc = index_dict['TexCoords0']
+    file.seek(seek_loc)
     section = read.read_string(file)
     nUvs = read.read_long(file)
 
@@ -193,7 +202,10 @@ def load_uv_coords(file):
     return uv_coords
 
 
-def load_normals(file):
+def load_normals(index_dict, file):
+    seek_loc = index_dict['Normals']
+    file.seek(seek_loc)
+
     section = read.read_string(file)
     nNormals = read.read_long(file)
 
@@ -204,7 +216,10 @@ def load_normals(file):
     return normals
 
 
-def load_positions(file):
+def load_vertices(index_dict, file):
+    seek_loc = index_dict['Vertices']
+    file.seek(seek_loc)
+
     section = read.read_string(file)
     nPositions = read.read_long(file)
 
@@ -294,12 +309,12 @@ def load_index(file):
     total_items = read.read_long(file)
     item_dictionary = dict()
     item_count = 0
+    print("Item count: %s" % total_items)
     while item_count < total_items:
         tagName = read.read_string(file)
         index = read.read_long(file)
         item_dictionary[tagName] = index
         item_count += 1
 
-    print(item_dictionary)
     return item_dictionary
 

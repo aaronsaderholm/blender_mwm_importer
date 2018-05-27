@@ -34,10 +34,22 @@ def load(operator, context):
 
 def load_01066002(operator, context, file):
     index = mwm.load_index(file)
-    print(index)
 
-    vertex_data = mwm.load_vertext_data(file)
-    model_parts = mwm.load_model_parts(file)
+    vertex_data = mwm.load_model_data(index, file)
+    model_parts = mwm.load_model_parts(index, file)
+
+    for i in range(len(model_parts)):
+        profile_mesh = bpy.data.meshes.new("Base_Profile_Data")
+        profile_mesh.from_pydata(vertex_data.positions, [], model_parts[i].faces)
+
+        profile_mesh.update()
+
+        profile_object = bpy.data.objects.new("Base_Profile", profile_mesh)
+        profile_object.data = profile_mesh
+
+        scene = context.scene
+        scene.objects.link(profile_object)
+        profile_object.select = True
 
 
 # This might be broken now.

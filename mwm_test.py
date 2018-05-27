@@ -22,19 +22,21 @@ def load():
 
 
 def load_01066002(file):
-    index = mwm.load_index(file)
+    index_dict = mwm.load_index(file)
 
-    print(index)
-    exit()
+    print(index_dict)
+
 
     print("Loading vertex data")
-    vertex_data = mwm.load_vertext_data(file)
+    vertex_data = mwm.load_model_data(index_dict, file)
 
     print("Loading model parameters")
-    model_params = mwm.load_model_params(file)
+    model_params = mwm.load_model_params(index_dict, file)
 
     print("Loading model parts")
-    model_parts = mwm.load_model_parts(file)
+    model_parts = mwm.load_model_parts(index_dict, file)
+
+    print(model_parts)
 
     file.close()
     exit()
