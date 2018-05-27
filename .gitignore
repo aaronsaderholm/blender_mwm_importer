@@ -2,3 +2,5 @@
 addons
 venv
 .idea
+blender-git
+__pycache__
