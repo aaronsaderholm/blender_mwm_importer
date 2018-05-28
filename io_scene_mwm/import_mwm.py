@@ -1,6 +1,6 @@
 import struct
 import importlib.util
-import mwm_functions as mwm
+from . import mwm_functions as mwm
 
 bpy_spec = importlib.util.find_spec("bpy")
 if bpy_spec is not None:
@@ -15,7 +15,7 @@ else:
 
 
 def load(operator, context):
-    file = open("test1.mwm", "rb")
+    file = open(operator.filepath, "rb")
 
     version_number = mwm.load_mwm_header(file)
 

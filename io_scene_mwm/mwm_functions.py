@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-import byte_functions as read
-import mwm_datatypes as mwm
+from . import byte_functions as read
+from . import mwm_datatypes as mwm
 import time
 
 
