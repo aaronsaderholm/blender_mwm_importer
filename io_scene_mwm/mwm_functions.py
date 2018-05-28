@@ -89,6 +89,8 @@ def load_mesh_data(index_dict, file):
     return mwm.VertexData(vertices, normals, uv_coords, binormals, tangents, tex_coords)
 
 
+# Check for class "MyMeshPartInfo" in SE Code, should be in
+# Sources/VRage.Render/Import/MyImportUtils.cs
 def load_mesh_parts(index_dict, file):
     section = read.read_string(file)
     nParts = read.read_long(file)
@@ -102,7 +104,11 @@ def load_mesh_parts(index_dict, file):
 
 
 def load_part(file):
-    file.read(4)  # 4 bytes, Don't know what they do
+    part_version = read.read_long(file)
+    print("Got part version %s" % part_version)
+    if part_version < "01052001":
+        draw_technique = read.read_long(file)
+
     count = read.read_long(file)
     face_count = int(count / 3)
 
