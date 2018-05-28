@@ -4,7 +4,7 @@ from . import mwm_datatypes as mwm
 import time
 
 
-def load_model_params(index_dict, file):
+def load_mesh_sections(index_dict, file):
     params = {}
 
     # RescaleToLengthInMeters param
@@ -78,7 +78,7 @@ def load_model_params(index_dict, file):
     return params
 
 
-def load_model_data(index_dict, file):
+def load_mesh_data(index_dict, file):
     vertices = load_vertices(index_dict, file)
     normals = load_normals(index_dict, file)
     uv_coords = load_uv_coords(index_dict, file)
@@ -89,7 +89,7 @@ def load_model_data(index_dict, file):
     return mwm.VertexData(vertices, normals, uv_coords, binormals, tangents, tex_coords)
 
 
-def load_model_parts(index_dict, file):
+def load_mesh_parts(index_dict, file):
     section = read.read_string(file)
     nParts = read.read_long(file)
 
@@ -118,7 +118,7 @@ def load_part(file):
     if (hasMaterial):
         material = load_material(file)
 
-    return mwm.ModelPart(faces, material)
+    return mwm.MeshPart(faces, material)
 
 
 def load_material(file):

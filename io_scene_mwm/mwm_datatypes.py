@@ -34,7 +34,7 @@ class BoundingSphere(object):
         self.radius = radius
 
 
-class ModelPart(object):
+class MeshPart(object):
 
     def __init__(self, faces, material):
         self.faces = faces
