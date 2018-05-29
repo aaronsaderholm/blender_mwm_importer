@@ -23,20 +23,26 @@ def load(operator, context):
 
     if version_number > 1066002:
         print("This is at least version 1066002")
-        load_01066002(operator, context, file)
+        load_01066002(operator, context, file, version_number)
     else:
         print("Model format is older than 1066002")
         file.seek(0)
-        load_classic(operator, context, file)
+        load_classic(operator, context, file, version_number)
 
     return {'FINISHED'}
 
 
-def load_01066002(operator, context, file):
+def load_01066002(operator, context, file, version):
     index = mwm.load_index(file)
 
-    vertex_data = mwm.load_model_data(index, file)
-    model_parts = mwm.load_model_parts(index, file)
+    print("Loading vertex data")
+    vertex_data = mwm.load_mesh_data(index, file)
+
+    print("Loading model parameters")
+    model_params = mwm.load_mesh_sections(index, file)
+
+    print("Loading model parts")
+    model_parts = mwm.load_mesh_parts(index, file, version)
 
     for i in range(len(model_parts)):
         profile_mesh = bpy.data.meshes.new("Base_Profile_Data")
@@ -61,8 +67,8 @@ def load_classic(operator, context, file):
 
     dummies = mwm.load_dummies(file)
     vertex_data = mwm.load_vertext_data(file)
-    model_params = mwm.load_model_params(file)
-    model_parts = mwm.load_model_parts(file)
+    model_params = mwm.load_mesh_sections(file)
+    model_parts = mwm.load_mesh_parts(file, version)
 
     file.close()
 

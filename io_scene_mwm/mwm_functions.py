@@ -91,33 +91,41 @@ def load_mesh_data(index_dict, file):
 
 # Check for class "MyMeshPartInfo" in SE Code, should be in
 # Sources/VRage.Render/Import/MyImportUtils.cs
-def load_mesh_parts(index_dict, file):
+def load_mesh_parts(index_dict, file, version):
     section = read.read_string(file)
     nParts = read.read_long(file)
 
     parts = []
     for i in range(nParts):
-        part = load_part(file)
+        part = load_part(file, version)
         parts.append(part)
 
     return parts
 
 
-def load_part(file):
-    part_version = read.read_long(file)
-    print("Got part version %s" % part_version)
-    if part_version < "01052001":
+def load_part(file, version):
+    m_MaterialHash = read.read_long(file)
+
+    if version < 1052001:
+        print("Older part version detected")
         draw_technique = read.read_long(file)
 
     count = read.read_long(file)
+    print("Count is %s" % count)
     face_count = int(count / 3)
+    print("Got %s faces." % face_count)
 
     faces = []
     for i in range(face_count):
-        x = read.read_long(file)
-        y = read.read_long(file)
-        z = read.read_long(file)
-        faces.append((x, y, z))
+        try:
+            x = read.read_long(file)
+            y = read.read_long(file)
+            z = read.read_long(file)
+            faces.append((x, y, z))
+        except:
+            print("%s / %s" % (i, face_count))
+            exit(1)
+
 
     hasMaterial = read.read_bool(file)
     material = None

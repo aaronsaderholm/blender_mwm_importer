@@ -14,27 +14,27 @@ def load():
 
     if version_number > 1066002:
         print("This is at least version 1066002")
-        load_01066002(file)
+        load_01066002(file, version_number)
     else:
         print("Model format is older than 1066002")
         file.seek(0)
-        load_classic(file)
+        load_classic(file, version_number)
 
 
-def load_01066002(file):
+def load_01066002(file, version):
     index_dict = mwm.load_index(file)
 
     print(index_dict)
 
 
     print("Loading vertex data")
-    vertex_data = mwm.load_model_data(index_dict, file)
+    vertex_data = mwm.load_mesh_data(index_dict, file)
 
     print("Loading model parameters")
-    model_params = mwm.load_model_params(index_dict, file)
+    model_params = mwm.load_mesh_sections(index_dict, file)
 
     print("Loading model parts")
-    model_parts = mwm.load_model_parts(index_dict, file)
+    model_parts = mwm.load_mesh_parts(index_dict, file, version)
 
     print(model_parts)
 
@@ -42,18 +42,18 @@ def load_01066002(file):
     exit()
 
 
-def load_classic(file):
+def load_classic(file, version):
     print("Loading dummies")
     dummies = mwm.load_dummies(file)
 
     print("Loading vertex data")
-    vertex_data = mwm.load_vertext_data(file)
+    vertex_data = mwm.load_vertex_data(file)
 
     print("Loading model parameters")
-    model_params = mwm.load_model_params(file)
+    model_params = mwm.load_mesh_sections(file)
 
     print("Loading model parts")
-    model_parts = mwm.load_model_parts(file)
+    model_parts = mwm.load_mesh_parts(file)
 
     file.close()
     exit()
