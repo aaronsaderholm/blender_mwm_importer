@@ -8,11 +8,18 @@ https://forum.keenswh.com/threads/blender-mwm-importer-wip.7231142/
 
 ## Usage
 
+## Windows
+
+Put `io_scene_mwm` to `%AppData%\Blender Foundation\Blender\2.79\scripts\addons`
+
+## Mac
 I'm not sure why you'd use a Mac for this but I did!  
 
 On a Mac you can install the plugins by moving `io_scene_mwm` to `/Applications/Blender/blender.app/Contents/Resources/2.79/scripts/addons`
 
 Other platforms you put it somewhere else.  Go google it or something.
+
+## How to use
 
 Once you put there: 
 * Run Blender
