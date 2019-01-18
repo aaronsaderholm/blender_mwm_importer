@@ -29,4 +29,4 @@ Once you put there:
 * Close the dialog.
 * Go to File -> Import -> "Space Engineers (.MWM)"
 
-At this point the plugin will crash and all this effort will be for naught.  Still working on that.  Blender deactivates the plugin whenever it crashes you you have to repeat the Add-ons step.
+At this point the plugin will ~~crash and all this effort will be for naught.~~ work perfectly fine probably.  Blender deactivates the plugin whenever it crashes you you have to repeat the Add-ons step.
